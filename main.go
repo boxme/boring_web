@@ -10,6 +10,8 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/", home)
 	r.HandleFunc("/contact", contact)
+	var handlerFor404 http.Handler = http.HandlerFunc(unknown404)
+	r.NotFoundHandler = handlerFor404
 	http.ListenAndServe(":3000", r)
 }
 
@@ -21,4 +23,9 @@ func home(w http.ResponseWriter, r *http.Request) {
 func contact(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 	fmt.Fprint(w, "To get in touch, please send an email to <a href=\"mailto:support@lenlocked.com\">support@lenslocked.com</a>.")
+}
+
+func unknown404(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+	fmt.Fprint(w, "404 not found here my boy")
 }
