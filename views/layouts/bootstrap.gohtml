@@ -8,9 +8,11 @@
       rel="stylesheet">
   </head>
 <body>
-<div class="container-fluid">
-  {{template "yield" .}}
-</div>
+  {{template "navbar"}}
+  
+  <div class="container-fluid">
+    {{template "yield" .}}
+  </div>
 <!-- jquery & Bootstrap JS -->
     <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js">
     </script>
