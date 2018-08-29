@@ -12,9 +12,13 @@ var homeView *views.View
 var contactView *views.View
 
 func main() {
+	homeView = views.NewView("bootstrap", "views/home.gohtml")
+	contactView = views.NewView("bootstrap", "views/contact.gohtml")
+
 	r := mux.NewRouter()
 	r.HandleFunc("/", home)
 	r.HandleFunc("/contact", contact)
+
 	var handlerFor404 http.Handler = http.HandlerFunc(unknown404)
 	r.NotFoundHandler = handlerFor404
 	http.ListenAndServe(":3000", r)
@@ -22,16 +26,16 @@ func main() {
 
 func home(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
-	homeView = views.NewView("bootstrap", "views/home.gohtml")
-	if err := homeView.Template.ExecuteTemplate(w, homeView.Layout, nil); err != nil {
-		panic(err)
-	}
+	must(homeView.Render(w, nil))
 }
 
 func contact(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
-	contactView = views.NewView("bootstrap", "views/contact.gohtml")
-	if err := contactView.Template.ExecuteTemplate(w, contactView.Layout, nil); err != nil {
+	must(contactView.Render(w, nil))
+}
+
+func must(err error) {
+	if err != nil {
 		panic(err)
 	}
 }
