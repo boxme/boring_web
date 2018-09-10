@@ -35,6 +35,6 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 
 func NewUsers() *Users {
 	return &Users{
-		NewView: views.NewView("bootstrap", "views/users/new.gohtml"),
+		NewView: views.NewView("bootstrap", "users/new"),
 	}
 }
