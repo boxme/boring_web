@@ -27,13 +27,16 @@ func main() {
 
 	var id int
 	var name, email string
-	row := db.QueryRow(`SELECT id, name, email FROM users WHERE id=$1`, 1)
-	err = row.Scan(&id, &name, &email)
+	rows, err := db.Query(`SELECT id, name, email FROM users WHERE email=$1 OR ID > $2`, "dnyy@email.com", 3)
 	if err != nil {
 		panic(err)
 	}
 
 	fmt.Println("Successfully connected!")
-	fmt.Println("ID:", id, "Name:", name, "Email:", email)
+	for rows.Next() {
+		err = rows.Scan(&id, &name, &email)
+		fmt.Println("ID:", id, "Name:", name, "Email:", email)
+	}
+
 	db.Close()
 }
