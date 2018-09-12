@@ -10,7 +10,7 @@ const (
 	host   = "localhost"
 	post   = 5432
 	user   = "desmond"
-	dbname = "lenslocked_dev"
+	dbname = "postgres"
 )
 
 func main() {
@@ -21,6 +21,13 @@ func main() {
 	}
 
 	err = db.Ping()
+	if err != nil {
+		panic(err)
+	}
+
+	var id int
+	row := db.QueryRow(`INSERT INTO users(name, email) VALUES($1, $2) RETURNING id`, "Desmond Ng", "dnyy@email.com")
+	err = row.Scan(&id)
 	if err != nil {
 		panic(err)
 	}
