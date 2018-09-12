@@ -26,12 +26,14 @@ func main() {
 	}
 
 	var id int
-	row := db.QueryRow(`INSERT INTO users(name, email) VALUES($1, $2) RETURNING id`, "Desmond Ng", "dnyy@email.com")
-	err = row.Scan(&id)
+	var name, email string
+	row := db.QueryRow(`SELECT id, name, email FROM users WHERE id=$1`, 1)
+	err = row.Scan(&id, &name, &email)
 	if err != nil {
 		panic(err)
 	}
 
 	fmt.Println("Successfully connected!")
+	fmt.Println("ID:", id, "Name:", name, "Email:", email)
 	db.Close()
 }
