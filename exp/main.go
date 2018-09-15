@@ -37,4 +37,11 @@ func main() {
 	}
 
 	fmt.Println(foundUser)
+
+	emailUser, err := us.ByEmail("michael@dundermifflin.com")
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(emailUser)
 }
