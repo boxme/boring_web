@@ -32,6 +32,10 @@ func NewUserService(connectionInfo string) (*UserService, error) {
 	}, nil
 }
 
+func (us *UserService) Create(user *User) error {
+	return us.db.Create(user).Error
+}
+
 func (us *UserService) ByID(id uint) (*User, error) {
 	var user User
 	err := us.db.Where("id = ?", id).First(&user).Error
