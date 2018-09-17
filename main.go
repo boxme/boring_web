@@ -40,6 +40,8 @@ func main() {
 	r.Handle("/login", usersC.LoginView).Methods("GET")
 	r.HandleFunc("/login", usersC.Login).Methods("POST")
 
+	r.HandleFunc("/cookietest", usersC.CookieTest).Methods("GET")
+
 	var handlerFor404 http.Handler = http.HandlerFunc(unknown404)
 	r.NotFoundHandler = handlerFor404
 	http.ListenAndServe(":3000", r)
