@@ -106,8 +106,9 @@ func (u *Users) signIn(w http.ResponseWriter, user *models.User) error {
 	}
 
 	cookie := http.Cookie{
-		Name:  "remember_token",
-		Value: user.Remember,
+		Name:     "remember_token",
+		Value:    user.Remember,
+		HttpOnly: true, // Cookie is not accessible to scripts
 	}
 	http.SetCookie(w, &cookie)
 
@@ -116,12 +117,13 @@ func (u *Users) signIn(w http.ResponseWriter, user *models.User) error {
 
 func (u *Users) CookieTest(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("remember_token")
+	user, err := u.us.ByRemember(cookie.Value)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	fmt.Fprintln(w, "RememberToken is:", cookie.Value)
+	fmt.Fprintln(w, "RememberToken is:", user)
 }
 
 func NewUsers(us *models.UserService) *Users {
