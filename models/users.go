@@ -20,12 +20,12 @@ const hmacSecretKey = "secret-hmac-key"
 
 type User struct {
 	gorm.Model
-	Name          string
-	Email         string `gorm: "not null; unique_index"`
-	Password      string `gorm: "-"`
-	PasswordHash  string `gorm: "not null"`
-	Remember      string `gorm: "-"`
-	RememberToken string `gorm: "not null;unqiue_index"`
+	Name         string
+	Email        string `gorm: "not null; unique_index"`
+	Password     string `gorm: "-"`
+	PasswordHash string `gorm: "not null"`
+	Remember     string `gorm: "-"`
+	RememberHash string `gorm: "not null; unqiue_index"`
 }
 
 type UserService struct {
@@ -65,7 +65,7 @@ func (us *UserService) Create(user *User) error {
 		return err
 	}
 	user.Remember = token
-	user.RememberToken = us.hmac.Hash(token)
+	user.RememberHash = us.hmac.Hash(token)
 
 	return us.db.Create(user).Error
 }
@@ -118,7 +118,7 @@ func (us *UserService) ByRemember(token string) (*User, error) {
 
 func (us *UserService) Update(user *User) error {
 	if user.Remember != "" {
-		user.RememberToken = us.hmac.Hash(user.Remember)
+		user.RememberHash = us.hmac.Hash(user.Remember)
 	}
 	return us.db.Save(user).Error
 }
