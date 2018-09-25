@@ -28,12 +28,52 @@ type User struct {
 	RememberHash string `gorm: "not null; unqiue_index"`
 }
 
-type UserService struct {
+type UserDB interface {
+	ByID(id uint) (*User, error)
+	ByEmail(email string) (*User, error)
+	ByRemember(token string) (*User, error)
+
+	Create(user *User) error
+	Update(user *User) error
+	Delete(id uint) error
+
+	Close() error
+
+	AutoMigrate() error
+}
+
+type userGorm struct {
 	db   *gorm.DB
 	hmac hash.HMAC
 }
 
-func NewUserService(connectionInfo string) (*UserService, error) {
+type UserService interface {
+	UserDB
+	Authenticate(email, password string) (*User, error)
+}
+
+type userService struct {
+	UserDB
+}
+
+type userValidator struct {
+	UserDB
+}
+
+func NewUserService(connectionInfo string) (UserService, error) {
+	ug, err := newUserGorm(connectionInfo)
+	if err != nil {
+		return nil, err
+	}
+
+	return &userService{
+		UserDB: userValidator{
+			UserDB: ug,
+		},
+	}, nil
+}
+
+func newUserGorm(connectionInfo string) (*userGorm, error) {
 	db, err := gorm.Open("postgres", connectionInfo)
 	if err != nil {
 		return nil, err
@@ -41,13 +81,13 @@ func NewUserService(connectionInfo string) (*UserService, error) {
 
 	db.LogMode(true)
 	hmac := hash.NewHMAC(hmacSecretKey)
-	return &UserService{
+	return &userGorm{
 		db:   db,
 		hmac: hmac,
 	}, nil
 }
 
-func (us *UserService) Create(user *User) error {
+func (us *userGorm) Create(user *User) error {
 	pwBytes := []byte(user.Password + userPwPepper)
 	hashedBytes, err := bcrypt.GenerateFromPassword(pwBytes, bcrypt.DefaultCost)
 	if err != nil {
@@ -70,8 +110,10 @@ func (us *UserService) Create(user *User) error {
 	return us.db.Create(user).Error
 }
 
-func (us *UserService) Authenticate(email string, password string) (*User, error) {
-	foundUser, err := us.ByEmail(email)
+// struct userService implements this function, which is declared by interface UserService
+// By Golang implicit interface implementation, this means userService has implemented interface UserService
+func (us *userService) Authenticate(email string, password string) (*User, error) {
+	foundUser, err := us.UserDB.ByEmail(email)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +129,7 @@ func (us *UserService) Authenticate(email string, password string) (*User, error
 	}
 }
 
-func (us *UserService) ByID(id uint) (*User, error) {
+func (us *userGorm) ByID(id uint) (*User, error) {
 	var user User
 	db := us.db.Where("id = ?", id)
 	err := first(db, &user)
@@ -98,14 +140,14 @@ func (us *UserService) ByID(id uint) (*User, error) {
 	return &user, nil
 }
 
-func (us *UserService) ByEmail(email string) (*User, error) {
+func (us *userGorm) ByEmail(email string) (*User, error) {
 	var user User
 	db := us.db.Where("email = ?", email)
 	err := first(db, &user)
 	return &user, err
 }
 
-func (us *UserService) ByRemember(token string) (*User, error) {
+func (us *userGorm) ByRemember(token string) (*User, error) {
 	var user User
 	rememberHash := us.hmac.Hash(token)
 	err := first(us.db.Where("remember_hash = ?", rememberHash), &user)
@@ -116,14 +158,14 @@ func (us *UserService) ByRemember(token string) (*User, error) {
 	return &user, nil
 }
 
-func (us *UserService) Update(user *User) error {
+func (us *userGorm) Update(user *User) error {
 	if user.Remember != "" {
 		user.RememberHash = us.hmac.Hash(user.Remember)
 	}
 	return us.db.Save(user).Error
 }
 
-func (us *UserService) Delete(id uint) error {
+func (us *userGorm) Delete(id uint) error {
 	if id == 0 {
 		return ErrInvalidID
 	}
@@ -132,7 +174,7 @@ func (us *UserService) Delete(id uint) error {
 	return us.db.Delete(&user).Error
 }
 
-func (us *UserService) DestructiveReset() error {
+func (us *userGorm) DestructiveReset() error {
 	err := us.db.DropTableIfExists(&User{}).Error
 	if err != nil {
 		return nil
@@ -141,7 +183,7 @@ func (us *UserService) DestructiveReset() error {
 	return us.AutoMigrate()
 }
 
-func (us *UserService) AutoMigrate() error {
+func (us *userGorm) AutoMigrate() error {
 	if err := us.db.AutoMigrate(&User{}).Error; err != nil {
 		return err
 	}
@@ -149,7 +191,7 @@ func (us *UserService) AutoMigrate() error {
 	return nil
 }
 
-func (us *UserService) Close() error {
+func (us *userGorm) Close() error {
 	return us.db.Close()
 }
 
