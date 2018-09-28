@@ -92,10 +92,6 @@ func newUserGorm(connectionInfo string) (*userGorm, error) {
 }
 
 func (uv *userValidator) Create(user *User) error {
-	if err := runUserValFns(user, uv.bcryptPassword); err != nil {
-		return err
-	}
-
 	if user.Remember != "" {
 		panic(errors.New("user's remember is not empty'"))
 	}
@@ -104,10 +100,22 @@ func (uv *userValidator) Create(user *User) error {
 	if err != nil {
 		return err
 	}
+
 	user.Remember = token
-	user.RememberHash = uv.hmac.Hash(token)
+	err = runUserValFns(user, uv.bcryptPassword, uv.hmacRemember)
+	if err != nil {
+		return err
+	}
 
 	return uv.UserDB.Create(user)
+}
+
+func (uv *userValidator) hmacRemember(user *User) error {
+	if user.Remember == "" {
+		return nil
+	}
+	user.RememberHash = uv.hmac.Hash(user.Remember)
+	return nil
 }
 
 func (uv *userValidator) bcryptPassword(user *User) error {
@@ -168,8 +176,13 @@ func (us *userGorm) ByEmail(email string) (*User, error) {
 }
 
 func (uv *userValidator) ByRemember(token string) (*User, error) {
-	rememberHash := uv.hmac.Hash(token)
-	return uv.UserDB.ByRemember(rememberHash)
+	user := User{
+		Remember: token,
+	}
+	if err := runUserValFns(&user, uv.hmacRemember); err != nil {
+		return nil, err
+	}
+	return uv.UserDB.ByRemember(user.RememberHash)
 }
 
 func (us *userGorm) ByRemember(rememberHash string) (*User, error) {
@@ -183,12 +196,9 @@ func (us *userGorm) ByRemember(rememberHash string) (*User, error) {
 }
 
 func (uv *userValidator) Update(user *User) error {
-	if err := runUserValFns(user, uv.bcryptPassword); err != nil {
+	err := runUserValFns(user, uv.bcryptPassword, uv.hmacRemember)
+	if err != nil {
 		return err
-	}
-
-	if user.Remember != "" {
-		user.RememberHash = uv.hmac.Hash(user.Remember)
 	}
 	return uv.UserDB.Update(user)
 }
