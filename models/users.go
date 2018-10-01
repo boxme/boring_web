@@ -12,13 +12,13 @@ import (
 )
 
 var (
-	ErrNotFound        = errors.New("models: resource not found")
-	ErrInvalidID       = errors.New("models: ID provided was invalid")
-	ErrInvalidPassword = errors.New("models: incorrect password provided")
-	userPwPepper       = "secret-random-string"
-	ErrEmailRequired   = errors.New("models: email address is required")
-	ErrEmailInvalid    = errors.New("models: email address is not valid")
-	ErrEmailTaken      = errors.New("models: email address is already taken")
+	ErrNotFound          = errors.New("models: resource not found")
+	ErrIDInvalid         = errors.New("models: ID provided was invalid")
+	ErrPasswordIncorrect = errors.New("models: incorrect password provided")
+	userPwPepper         = "secret-random-string"
+	ErrEmailRequired     = errors.New("models: email address is required")
+	ErrEmailInvalid      = errors.New("models: email address is not valid")
+	ErrEmailTaken        = errors.New("models: email address is already taken")
 )
 
 const hmacSecretKey = "secret-hmac-key"
@@ -177,7 +177,7 @@ func (us *userService) Authenticate(email string, password string) (*User, error
 	case nil:
 		return foundUser, nil
 	case bcrypt.ErrMismatchedHashAndPassword:
-		return nil, ErrInvalidPassword
+		return nil, ErrPasswordIncorrect
 	default:
 		return nil, err
 	}
@@ -266,7 +266,7 @@ func (uv *userValidator) Delete(id uint) error {
 func (uv *userValidator) idGreaterThan(n uint) userValFn {
 	return userValFn(func(user *User) error {
 		if user.ID <= n {
-			return ErrInvalidID
+			return ErrIDInvalid
 		}
 		return nil
 	})
