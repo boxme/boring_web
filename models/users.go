@@ -7,6 +7,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"lenslocked.com/hash"
 	"lenslocked.com/rand"
+	"regexp"
+	"strings"
 )
 
 var (
@@ -14,6 +16,8 @@ var (
 	ErrInvalidID       = errors.New("models: ID provided was invalid")
 	ErrInvalidPassword = errors.New("models: incorrect password provided")
 	userPwPepper       = "secret-random-string"
+	ErrEmailRequired   = errors.New("models: email address is required")
+	ErrEmailInvalid    = errors.New("models: email address is not valid")
 )
 
 const hmacSecretKey = "secret-hmac-key"
@@ -57,7 +61,8 @@ type userService struct {
 
 type userValidator struct {
 	UserDB
-	hmac hash.HMAC
+	hmac       hash.HMAC
+	emailRegex *regexp.Regexp
 }
 
 // Declare function type
@@ -70,10 +75,7 @@ func NewUserService(connectionInfo string) (UserService, error) {
 	}
 
 	hmac := hash.NewHMAC(hmacSecretKey)
-	uv := &userValidator{
-		hmac:   hmac,
-		UserDB: ug,
-	}
+	uv := newUserValidator(ug, hmac)
 	return &userService{
 		UserDB: uv,
 	}, nil
@@ -91,23 +93,45 @@ func newUserGorm(connectionInfo string) (*userGorm, error) {
 	}, nil
 }
 
+func newUserValidator(udb UserDB, hmac hash.HMAC) *userValidator {
+	return &userValidator{
+		UserDB:     udb,
+		hmac:       hmac,
+		emailRegex: regexp.MustCompile(`^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,16}$`),
+	}
+}
+
 func (uv *userValidator) Create(user *User) error {
 	if user.Remember != "" {
 		panic(errors.New("user's remember is not empty'"))
+	}
+
+	err := runUserValFns(
+		user,
+		uv.bcryptPassword,
+		uv.setRememberIfUnset,
+		uv.hmacRemember,
+		uv.requireEmail,
+		uv.normalizeEmail,
+		uv.emailFormat)
+	if err != nil {
+		return err
+	}
+
+	return uv.UserDB.Create(user)
+}
+
+func (uv *userValidator) setRememberIfUnset(user *User) error {
+	if user.Remember != "" {
+		return nil
 	}
 
 	token, err := rand.RememberToken()
 	if err != nil {
 		return err
 	}
-
 	user.Remember = token
-	err = runUserValFns(user, uv.bcryptPassword, uv.hmacRemember)
-	if err != nil {
-		return err
-	}
-
-	return uv.UserDB.Create(user)
+	return nil
 }
 
 func (uv *userValidator) hmacRemember(user *User) error {
@@ -168,6 +192,17 @@ func (us *userGorm) ByID(id uint) (*User, error) {
 	return &user, nil
 }
 
+func (uv *userValidator) ByEmail(email string) (*User, error) {
+	user := User{
+		Email: email,
+	}
+	err := runUserValFns(&user, uv.normalizeEmail)
+	if err != nil {
+		return nil, err
+	}
+	return uv.UserDB.ByEmail(user.Email)
+}
+
 func (us *userGorm) ByEmail(email string) (*User, error) {
 	var user User
 	db := us.db.Where("email = ?", email)
@@ -196,7 +231,13 @@ func (us *userGorm) ByRemember(rememberHash string) (*User, error) {
 }
 
 func (uv *userValidator) Update(user *User) error {
-	err := runUserValFns(user, uv.bcryptPassword, uv.hmacRemember)
+	err := runUserValFns(
+		user,
+		uv.bcryptPassword,
+		uv.hmacRemember,
+		uv.requireEmail,
+		uv.normalizeEmail,
+		uv.emailFormat)
 	if err != nil {
 		return err
 	}
@@ -208,11 +249,24 @@ func (us *userGorm) Update(user *User) error {
 }
 
 func (uv *userValidator) Delete(id uint) error {
-	if id == 0 {
-		return ErrInvalidID
+	var user User
+	user.ID = id
+	err := runUserValFns(&user, uv.idGreaterThan(0))
+	if err != nil {
+		return err
 	}
 
 	return uv.UserDB.Delete(id)
+}
+
+// Cast closure to userValFn type
+func (uv *userValidator) idGreaterThan(n uint) userValFn {
+	return userValFn(func(user *User) error {
+		if user.ID <= n {
+			return ErrInvalidID
+		}
+		return nil
+	})
 }
 
 func (us *userGorm) Delete(id uint) error {
@@ -248,6 +302,30 @@ func first(db *gorm.DB, dst interface{}) error {
 	}
 
 	return err
+}
+
+func (uv *userValidator) normalizeEmail(user *User) error {
+	user.Email = strings.ToLower(user.Email)
+	user.Email = strings.TrimSpace(user.Email)
+	return nil
+}
+
+func (uv *userValidator) requireEmail(user *User) error {
+	if user.Email == "" {
+		return ErrEmailRequired
+	}
+	return nil
+}
+
+func (uv *userValidator) emailFormat(user *User) error {
+	if user.Email == "" {
+		return nil
+	}
+
+	if !uv.emailRegex.MatchString(user.Email) {
+		return ErrEmailInvalid
+	}
+	return nil
 }
 
 func runUserValFns(user *User, fns ...userValFn) error {
