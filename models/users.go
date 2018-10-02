@@ -21,6 +21,8 @@ var (
 	ErrEmailTaken        = errors.New("models: email address is already taken")
 	ErrPasswordTooShort  = errors.New("models: password must be least 8 characters long")
 	ErrPasswordRequired  = errors.New("models: password is required")
+	ErrRememberRequired  = errors.New("models: remember token is required")
+	ErrRememberTooShort  = errors.New("models: remember token must be at least 32 bytes")
 )
 
 const hmacSecretKey = "secret-hmac-key"
@@ -115,7 +117,9 @@ func (uv *userValidator) Create(user *User) error {
 		uv.bcryptPassword,
 		uv.passwordHashRequired,
 		uv.setRememberIfUnset,
+		uv.rememberMinBytes,
 		uv.hmacRemember,
+		uv.rememberHashRequired,
 		uv.requireEmail,
 		uv.normalizeEmail,
 		uv.emailFormat,
@@ -242,7 +246,9 @@ func (uv *userValidator) Update(user *User) error {
 		uv.passwordMinLength,
 		uv.bcryptPassword,
 		uv.passwordHashRequired,
+		uv.rememberMinBytes,
 		uv.hmacRemember,
+		uv.rememberHashRequired,
 		uv.requireEmail,
 		uv.normalizeEmail,
 		uv.emailFormat,
@@ -377,6 +383,31 @@ func (uv *userValidator) passwordRequired(user *User) error {
 func (uv *userValidator) passwordHashRequired(user *User) error {
 	if user.PasswordHash == "" {
 		return ErrPasswordRequired
+	}
+
+	return nil
+}
+
+func (uv *userValidator) rememberMinBytes(user *User) error {
+	if user.Remember == "" {
+		return nil
+	}
+
+	n, err := rand.NBytes(user.Remember)
+	if err != nil {
+		return err
+	}
+
+	if n < 32 {
+		return ErrRememberTooShort
+	}
+
+	return nil
+}
+
+func (uv *userValidator) rememberHashRequired(user *User) error {
+	if user.RememberHash == "" {
+		return ErrRememberRequired
 	}
 
 	return nil
