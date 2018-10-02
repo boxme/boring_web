@@ -19,6 +19,8 @@ var (
 	ErrEmailRequired     = errors.New("models: email address is required")
 	ErrEmailInvalid      = errors.New("models: email address is not valid")
 	ErrEmailTaken        = errors.New("models: email address is already taken")
+	ErrPasswordTooShort  = errors.New("models: password must be least 8 characters long")
+	ErrPasswordRequired  = errors.New("models: password is required")
 )
 
 const hmacSecretKey = "secret-hmac-key"
@@ -74,7 +76,6 @@ func NewUserService(connectionInfo string) (UserService, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	hmac := hash.NewHMAC(hmacSecretKey)
 	uv := newUserValidator(ug, hmac)
 	return &userService{
@@ -109,7 +110,10 @@ func (uv *userValidator) Create(user *User) error {
 
 	err := runUserValFns(
 		user,
+		uv.passwordRequired,
+		uv.passwordMinLength,
 		uv.bcryptPassword,
+		uv.passwordHashRequired,
 		uv.setRememberIfUnset,
 		uv.hmacRemember,
 		uv.requireEmail,
@@ -235,7 +239,9 @@ func (us *userGorm) ByRemember(rememberHash string) (*User, error) {
 func (uv *userValidator) Update(user *User) error {
 	err := runUserValFns(
 		user,
+		uv.passwordMinLength,
 		uv.bcryptPassword,
+		uv.passwordHashRequired,
 		uv.hmacRemember,
 		uv.requireEmail,
 		uv.normalizeEmail,
@@ -343,6 +349,34 @@ func (uv *userValidator) emailIsAvail(user *User) error {
 
 	if user.ID != existing.ID {
 		return ErrEmailTaken
+	}
+
+	return nil
+}
+
+func (uv *userValidator) passwordMinLength(user *User) error {
+	if user.Password == "" {
+		return nil
+	}
+
+	if len(user.Password) < 8 {
+		return ErrPasswordTooShort
+	}
+
+	return nil
+}
+
+func (uv *userValidator) passwordRequired(user *User) error {
+	if user.Password == "" {
+		return ErrPasswordRequired
+	}
+
+	return nil
+}
+
+func (uv *userValidator) passwordHashRequired(user *User) error {
+	if user.PasswordHash == "" {
+		return ErrPasswordRequired
 	}
 
 	return nil
