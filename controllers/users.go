@@ -5,6 +5,7 @@ import (
 	"lenslocked.com/models"
 	"lenslocked.com/rand"
 	"lenslocked.com/views"
+	"log"
 	"net/http"
 )
 
@@ -27,17 +28,7 @@ type LoginForm struct {
 
 // GET /signup
 func (u *Users) New(w http.ResponseWriter, r *http.Request) {
-	alert := views.Alert{
-		Level:   views.AlertLvlSuccess,
-		Message: "Successfully rendered a dynamic alert!",
-	}
-
-	data := views.Data{
-		Alert: &alert,
-		Yield: "this can be any type",
-	}
-
-	if err := u.NewView.Render(w, data); err != nil {
+	if err := u.NewView.Render(w, nil); err != nil {
 		panic(err)
 	}
 }
@@ -45,8 +36,15 @@ func (u *Users) New(w http.ResponseWriter, r *http.Request) {
 // POST /signup
 func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 	var form SignupForm
+	var vd views.Data
 	if err := parseForm(r, &form); err != nil {
-		panic(err)
+		log.Println(err)
+		vd.Alert = &views.Alert{
+			Level:   views.AlertLvlError,
+			Message: views.AlertMsgGeneric,
+		}
+		u.NewView.Render(w, vd)
+		return
 	}
 
 	user := models.User{
@@ -55,13 +53,17 @@ func (u *Users) Create(w http.ResponseWriter, r *http.Request) {
 		Password: form.Password,
 	}
 	if err := u.us.Create(&user); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		vd.Alert = &views.Alert{
+			Level:   views.AlertLvlError,
+			Message: err.Error(),
+		}
+		u.NewView.Render(w, vd)
 		return
 	}
 
 	err := u.signIn(w, &user)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Redirect(w, r, "/login", http.StatusFound)
 		return
 	}
 

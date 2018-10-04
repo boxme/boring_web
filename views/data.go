@@ -5,6 +5,7 @@ const (
 	AlertLvlWarning = "warning"
 	AlertLvlInfo    = "info"
 	AlertLvlSuccess = "success"
+	AlertMsgGeneric = "Something went wrong. Plrease try again."
 )
 
 // Data is the top level structure that views expect data // to come in.
