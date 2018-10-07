@@ -11,21 +11,30 @@ import (
 	"strings"
 )
 
-var (
-	ErrNotFound          = errors.New("models: resource not found")
-	ErrIDInvalid         = errors.New("models: ID provided was invalid")
-	ErrPasswordIncorrect = errors.New("models: incorrect password provided")
-	userPwPepper         = "secret-random-string"
-	ErrEmailRequired     = errors.New("models: email address is required")
-	ErrEmailInvalid      = errors.New("models: email address is not valid")
-	ErrEmailTaken        = errors.New("models: email address is already taken")
-	ErrPasswordTooShort  = errors.New("models: password must be least 8 characters long")
-	ErrPasswordRequired  = errors.New("models: password is required")
-	ErrRememberRequired  = errors.New("models: remember token is required")
-	ErrRememberTooShort  = errors.New("models: remember token must be at least 32 bytes")
+const (
+	userPwPepper  = "secret-random-string"
+	hmacSecretKey = "secret-hmac-key"
 )
 
-const hmacSecretKey = "secret-hmac-key"
+const (
+	ErrNotFound          modelError = "models: resource not found"
+	ErrIDInvalid         modelError = "models: ID provided was invalid"
+	ErrPasswordIncorrect modelError = "models: incorrect " +
+		"password provided"
+	ErrPasswordTooShort modelError = "models: password must " +
+		"be at least 8 characters long"
+	ErrPasswordRequired modelError = "models: password is required"
+	ErrEmailRequired    modelError = "models: email address is " +
+		"required"
+	ErrEmailInvalid modelError = "models: email address is " +
+		"not valid"
+	ErrEmailTaken modelError = "models: email address is " +
+		"already taken"
+	ErrRememberRequired modelError = "models: remember token " +
+		"is required"
+	ErrRememberTooShort modelError = "models: remember token " +
+		"must be at least 32 bytes"
+)
 
 type User struct {
 	gorm.Model
@@ -68,6 +77,19 @@ type userValidator struct {
 	UserDB
 	hmac       hash.HMAC
 	emailRegex *regexp.Regexp
+}
+
+type modelError string
+
+func (e modelError) Error() string {
+	return string(e)
+}
+
+func (e modelError) Public() string {
+	s := strings.Replace(string(e), "models: ", "", 1)
+	split := strings.Split(s, " ")
+	split[0] = strings.Title(split[0])
+	return strings.Join(split, " ")
 }
 
 // Declare function type
