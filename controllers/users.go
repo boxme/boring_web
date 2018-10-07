@@ -28,9 +28,7 @@ type LoginForm struct {
 
 // GET /signup
 func (u *Users) New(w http.ResponseWriter, r *http.Request) {
-	if err := u.NewView.Render(w, nil); err != nil {
-		panic(err)
-	}
+	u.NewView.Render(w, nil)
 }
 
 // POST /signup
@@ -81,7 +79,7 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 		case models.ErrNotFound:
 			vd.AlertError("No user exists with that email address")
 		default:
-			vd.SetAlert(e)
+			vd.SetAlert(err)
 
 		}
 		u.LoginView.Render(w, vd)
