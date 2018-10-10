@@ -54,10 +54,6 @@ type UserDB interface {
 	Create(user *User) error
 	Update(user *User) error
 	Delete(id uint) error
-
-	Close() error
-
-	AutoMigrate() error
 }
 
 type userGorm struct {
@@ -95,28 +91,15 @@ func (e modelError) Public() string {
 // Declare function type
 type userValFn func(*User) error
 
-func NewUserService(connectionInfo string) (UserService, error) {
-	ug, err := newUserGorm(connectionInfo)
-	if err != nil {
-		return nil, err
+func NewUserService(db *gorm.DB) UserService {
+	ug := &userGorm{
+		db: db,
 	}
 	hmac := hash.NewHMAC(hmacSecretKey)
 	uv := newUserValidator(ug, hmac)
 	return &userService{
 		UserDB: uv,
-	}, nil
-}
-
-func newUserGorm(connectionInfo string) (*userGorm, error) {
-	db, err := gorm.Open("postgres", connectionInfo)
-	if err != nil {
-		return nil, err
 	}
-
-	db.LogMode(true)
-	return &userGorm{
-		db: db,
-	}, nil
 }
 
 func newUserValidator(udb UserDB, hmac hash.HMAC) *userValidator {
@@ -309,27 +292,6 @@ func (uv *userValidator) idGreaterThan(n uint) userValFn {
 func (us *userGorm) Delete(id uint) error {
 	user := User{Model: gorm.Model{ID: id}}
 	return us.db.Delete(&user).Error
-}
-
-func (us *userGorm) DestructiveReset() error {
-	err := us.db.DropTableIfExists(&User{}).Error
-	if err != nil {
-		return nil
-	}
-
-	return us.AutoMigrate()
-}
-
-func (us *userGorm) AutoMigrate() error {
-	if err := us.db.AutoMigrate(&User{}).Error; err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (us *userGorm) Close() error {
-	return us.db.Close()
 }
 
 func first(db *gorm.DB, dst interface{}) error {
