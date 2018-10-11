@@ -49,10 +49,10 @@ func main() {
 	r.HandleFunc("/cookietest", usersC.CookieTest).Methods("GET")
 
 	newGallery := requireUserMw.Apply(galleriesC.New)
-	r.Handle("/galleries/new", newGallery).Methods("GET")
+	r.HandleFunc("/galleries/new", newGallery).Methods("GET")
 
 	createGallery := requireUserMw.ApplyFn(galleriesC.Create)
-	r.Handle("/galleries", createGallery).Methods("POST")
+	r.HandleFunc("/galleries", createGallery).Methods("POST")
 
 	var handlerFor404 http.Handler = http.HandlerFunc(unknown404)
 	r.NotFoundHandler = handlerFor404
