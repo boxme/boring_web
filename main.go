@@ -36,6 +36,7 @@ func main() {
 	}
 
 	r := mux.NewRouter()
+
 	r.Handle("/", staticC.Home).Methods("GET")
 	r.Handle("/contact", staticC.Contact).Methods("GET")
 	r.Handle("/faq", staticC.Faq).Methods("GET")
@@ -53,6 +54,8 @@ func main() {
 
 	createGallery := requireUserMw.ApplyFn(galleriesC.Create)
 	r.HandleFunc("/galleries", createGallery).Methods("POST")
+
+	r.HandleFunc("/galleries/{id:[0-9]+}", galleriesC.Show).Methods("GET")
 
 	var handlerFor404 http.Handler = http.HandlerFunc(unknown404)
 	r.NotFoundHandler = handlerFor404
