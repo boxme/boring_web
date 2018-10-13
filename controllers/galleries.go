@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"fmt"
+	"lenslocked.com/context"
 	"lenslocked.com/models"
 	"lenslocked.com/views"
 	"net/http"
@@ -32,8 +33,10 @@ func (g *Galleries) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	user := context.User(r.Context())
 	gallery := models.Gallery{
-		Title: form.Title,
+		Title:  form.Title,
+		UserID: user.ID,
 	}
 
 	if err := g.gs.Create(&gallery); err != nil {
