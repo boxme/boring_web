@@ -56,6 +56,7 @@ func main() {
 	r.HandleFunc("/galleries", createGallery).Methods("POST")
 
 	r.HandleFunc("/galleries/{id:[0-9]+}", galleriesC.Show).Methods("GET").Name(controllers.ShowGallery)
+	r.HandleFunc("/galleries/{id:[0-9]+}/edit", requireUserMw.ApplyFn(galleriesC.Edit)).Methods("GET")
 
 	var handlerFor404 http.Handler = http.HandlerFunc(unknown404)
 	r.NotFoundHandler = handlerFor404
