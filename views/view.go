@@ -70,7 +70,7 @@ func (v *View) Render(w http.ResponseWriter, r *http.Request, data interface{}) 
 	// Lookup and set th user to the User field
 	vd.User = context.User(r.Context())
 	var buf bytes.Buffer
-	err := v.Template.ExecuteTemplate(w, v.Layout, data)
+	err := v.Template.ExecuteTemplate(w, v.Layout, vd)
 	if err != nil {
 		http.Error(w, "Something went wrong. If the problem persists, please email us", http.StatusInternalServerError)
 		return
