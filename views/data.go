@@ -13,6 +13,7 @@ const (
 // Data is the top level structure that views expect data // to come in.
 type Data struct {
 	Alert *Alert
+	User  *models.User
 	Yield interface{}
 }
 

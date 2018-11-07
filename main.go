@@ -33,9 +33,11 @@ func main() {
 	usersC := controllers.NewUsers(services.User)
 	galleriesC := controllers.NewGalleries(services.Gallery, r)
 
-	requireUserMw := middleware.RequireUser{
+	userMw := middleware.User{
 		UserService: services.User,
 	}
+
+	requireUserMw := middleware.RequireUser{}
 
 	r.Handle("/", staticC.Home).Methods("GET")
 	r.Handle("/contact", staticC.Contact).Methods("GET")
@@ -65,7 +67,9 @@ func main() {
 
 	var handlerFor404 http.Handler = http.HandlerFunc(unknown404)
 	r.NotFoundHandler = handlerFor404
-	http.ListenAndServe(":3000", r)
+
+	// User middleware will run before the router routes a user to the page
+	http.ListenAndServe(":3000", userMw.Apply(r))
 }
 
 func must(err error) {
