@@ -1,0 +1,5 @@
+# Anything under a tmp folder
+**/tmp/*
+
+# Uploaded images
+images/**
