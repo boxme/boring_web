@@ -251,5 +251,9 @@ func (g *Galleries) galleryByID(w http.ResponseWriter, r *http.Request) (*models
 		return nil, err
 	}
 
+	// Get all images of this gallery
+	images, _ := g.is.ByGalleryID(gallery.ID)
+	gallery.Images = images
+
 	return gallery, nil
 }
