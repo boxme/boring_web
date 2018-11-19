@@ -49,6 +49,8 @@ func main() {
 	r.Handle("/login", usersC.LoginView).Methods("GET")
 	r.HandleFunc("/login", usersC.Login).Methods("POST")
 
+	r.HandleFunc("/logout", usersC.Logout).Methods("GET")
+
 	r.HandleFunc("/cookietest", usersC.CookieTest).Methods("GET")
 
 	newGallery := requireUserMw.Apply(galleriesC.New)

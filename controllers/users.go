@@ -2,11 +2,13 @@ package controllers
 
 import (
 	"fmt"
+	"lenslocked.com/context"
 	"lenslocked.com/models"
 	"lenslocked.com/rand"
 	"lenslocked.com/views"
 	"log"
 	"net/http"
+	"time"
 )
 
 type Users struct {
@@ -96,6 +98,17 @@ func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/galleries", http.StatusFound)
 }
 
+func (u *Users) Logout(w http.ResponseWriter, r *http.Request) {
+	user := context.User(r.Context())
+	err := u.signOut(w, user)
+	if err != nil {
+		// TODO: show error logging out
+		return
+	}
+
+	http.Redirect(w, r, "/login", http.StatusFound)
+}
+
 func (u *Users) signIn(w http.ResponseWriter, user *models.User) error {
 	if user.Remember == "" {
 		token, err := rand.RememberToken()
@@ -117,6 +130,24 @@ func (u *Users) signIn(w http.ResponseWriter, user *models.User) error {
 	}
 	http.SetCookie(w, &cookie)
 
+	return nil
+}
+
+func (u *Users) signOut(w http.ResponseWriter, user *models.User) error {
+	user.Remember = ""
+	err := u.us.Update(user)
+	if err != nil {
+		return err
+	}
+
+	cookie := http.Cookie{
+		Name:     "remember_token",
+		Value:    "",
+		Expires:  time.Unix(0, 0),
+		HttpOnly: true,
+	}
+
+	http.SetCookie(w, &cookie)
 	return nil
 }
 
