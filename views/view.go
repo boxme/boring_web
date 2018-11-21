@@ -2,6 +2,8 @@ package views
 
 import (
 	"bytes"
+	"errors"
+	"github.com/gorilla/csrf"
 	"html/template"
 	"io"
 	"lenslocked.com/context"
@@ -24,7 +26,20 @@ func NewView(layout string, files ...string) *View {
 	addTemplatePath(files)
 	addTemplateExt(files)
 	files = append(files, layoutFiles()...)
-	t, err := template.ParseFiles(files...)
+
+	// We are now changing how we create our templates, calling
+	// New("") to give us a template that we can add a function to
+	// before finally passing in files to parse as part of the template.
+	t, err := template.New("").Funcs(template.FuncMap{
+		// If this is called without being replace with a proper implementation
+		// returning an error as the second argument will cause our template
+		// package to return an error when executed
+		"csrfField": func() (template.HTML, error) {
+			return "", errors.New("csrfField is not implemented")
+		},
+		// Once we have our template with a function we are going to pass in files
+		// to parse
+	}).ParseFiles(files...)
 	if err != nil {
 		panic(err)
 	}
@@ -70,7 +85,18 @@ func (v *View) Render(w http.ResponseWriter, r *http.Request, data interface{}) 
 	// Lookup and set th user to the User field
 	vd.User = context.User(r.Context())
 	var buf bytes.Buffer
-	err := v.Template.ExecuteTemplate(w, v.Layout, vd)
+
+	// We need to create the csrfField using the current http request
+	csrfField := csrf.TemplateField(r)
+	tpl := v.Template.Funcs(template.FuncMap{
+		"csrfField": func() template.HTML {
+			// We can then create this closure that returns the csrfField for
+			// any templates that need access to it.
+			return csrfField
+		},
+	})
+
+	err := tpl.ExecuteTemplate(w, v.Layout, vd)
 	if err != nil {
 		http.Error(w, "Something went wrong. If the problem persists, please email us", http.StatusInternalServerError)
 		return
