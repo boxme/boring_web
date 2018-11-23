@@ -8,6 +8,7 @@ import (
 	"io"
 	"lenslocked.com/context"
 	"net/http"
+	"net/url"
 	"path/filepath"
 )
 
@@ -36,6 +37,9 @@ func NewView(layout string, files ...string) *View {
 		// package to return an error when executed
 		"csrfField": func() (template.HTML, error) {
 			return "", errors.New("csrfField is not implemented")
+		},
+		"pathEscape": func(s string) string {
+			return url.PathEscape(s)
 		},
 		// Once we have our template with a function we are going to pass in files
 		// to parse
