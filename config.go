@@ -34,14 +34,18 @@ func (c PostgresConfig) ConnectionInfo() string {
 }
 
 type Config struct {
-	Port int
-	Env  string
+	Port    int    `json:"port"`
+	Env     string `json:"env"`
+	Pepper  string `json:"pepper"`
+	HMACKey string `json:"hmac_key"`
 }
 
 func DefaultConfig() Config {
 	return Config{
-		Port: 3000,
-		Env:  "dev",
+		Port:    3000,
+		Env:     "dev",
+		Pepper:  "secret-random-string",
+		HMACKey: "secret-hmac-key",
 	}
 }
 
