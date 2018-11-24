@@ -11,18 +11,9 @@ import (
 	"net/http"
 )
 
-const (
-	host   = "localhost"
-	port   = 5432
-	user   = "desmond"
-	dbname = "lenslocked_dev"
-)
-
 func main() {
-
-	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s dbname=%s sslmode=disable", host, port, user, dbname)
-
-	services, err := models.NewServices(psqlInfo)
+	dbCfg := DefaultPostgresConfig()
+	services, err := models.NewServices(dbCfg.Dialect(), dbCfg.ConnectionInfo())
 	if err != nil {
 		panic(err)
 	}
@@ -84,16 +75,17 @@ func main() {
 	var handlerFor404 http.Handler = http.HandlerFunc(unknown404)
 	r.NotFoundHandler = handlerFor404
 
-	isProd := false
 	b, err := rand.Bytes(32)
 	if err != nil {
 		panic(err)
 	}
+
+	cfg := DefaultConfig()
 	// Creating CSRF protection middleware
-	csrfMw := csrf.Protect(b, csrf.Secure(isProd))
+	csrfMw := csrf.Protect(b, csrf.Secure(cfg.IsProd()))
 
 	// User middleware will run before the router routes a user to the page
-	http.ListenAndServe(":3000", csrfMw(userMw.Apply(r)))
+	http.ListenAndServe(fmt.Sprintf(":%d", cfg.Port), csrfMw(userMw.Apply(r)))
 }
 
 func must(err error) {
