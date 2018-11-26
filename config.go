@@ -1,6 +1,10 @@
 package main
 
-import "fmt"
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+)
 
 type PostgresConfig struct {
 	Host     string `json:"host"` // JSON tags
@@ -34,19 +38,53 @@ func (c PostgresConfig) ConnectionInfo() string {
 }
 
 type Config struct {
-	Port    int    `json:"port"`
-	Env     string `json:"env"`
-	Pepper  string `json:"pepper"`
-	HMACKey string `json:"hmac_key"`
+	Port     int            `json:"port"`
+	Env      string         `json:"env"`
+	Pepper   string         `json:"pepper"`
+	HMACKey  string         `json:"hmac_key"`
+	Database PostgresConfig `json:"database"`
 }
 
 func DefaultConfig() Config {
 	return Config{
-		Port:    3000,
-		Env:     "dev",
-		Pepper:  "secret-random-string",
-		HMACKey: "secret-hmac-key",
+		Port:     3000,
+		Env:      "dev",
+		Pepper:   "secret-random-string",
+		HMACKey:  "secret-hmac-key",
+		Database: DefaultPostgresConfig(),
 	}
+}
+
+func LoadConfig(configReq bool) Config {
+	f, err := os.Open(".config")
+	if err != nil {
+		if configReq {
+			panic(err)
+		}
+
+		fmt.Println("Using the default config...")
+		return DefaultConfig()
+	}
+
+	var c Config
+
+	// We need a json decoder, which will read from the file
+	// we opened when decoding
+	decoder := json.NewDecoder(f)
+
+	// Decode the file and place the results in c, the
+	// Config variable we created for the results. The decoder
+	// knows how to decode the data because of the struct tags
+	// (eg `json:"port"`) we added to our Config and PostgresConfig
+	// fields, much like GORM uses struct tags to know which
+	// database column each field maps to.
+	err = decoder.Decode(&c)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("Successfully loaded .config")
+	return c
 }
 
 func (c Config) IsProd() bool {
