@@ -3,3 +3,6 @@
 
 # Uploaded images
 images/**
+
+# ssl
+*.pem

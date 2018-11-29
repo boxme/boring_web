@@ -95,8 +95,16 @@ func main() {
 	// Creating CSRF protection middleware
 	csrfMw := csrf.Protect(b, csrf.Secure(cfg.IsProd()))
 
+	GenerateSSL()
+
 	// User middleware will run before the router routes a user to the page
-	http.ListenAndServe(fmt.Sprintf(":%d", cfg.Port), csrfMw(userMw.Apply(r)))
+	server := http.Server{
+		Addr:    fmt.Sprintf("localhost:%d", cfg.Port),
+		Handler: csrfMw(userMw.Apply(r)),
+	}
+
+	err = server.ListenAndServeTLS("cert.pem", "key.pem")
+	panic(err)
 }
 
 func must(err error) {
